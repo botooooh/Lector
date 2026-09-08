@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal, Youtube } from 'lucide-react';
+import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal } from 'lucide-react';
 import YouTube from 'react-youtube';
 import { useStore } from './store';
 import './index.css';
@@ -341,8 +341,8 @@ function App() {
         </div>
       </main>
 
-      <footer className="player-bar">
-        <div className="player-left">
+      <footer className="player-widget">
+        <div className="widget-header">
           <div className="track-art-wrapper">
             <div className="track-art">
               {currentTrack ? (
@@ -356,54 +356,47 @@ function App() {
               )}
             </div>
             {currentTrack?.type === 'youtube' && (
-              <div className="source-icon-overlay"><Youtube size={12} fill="currentColor" /></div>
+              <div className="source-icon-overlay"><img src="/li_youtube.svg" alt="yt" style={{width: '12px', height: '12px'}} /></div>
             )}
           </div>
+          
           <div className="track-info">
-            <div className="track-title-wrapper">
-              <span className="track-title">{currentTrack ? currentTrack.title : 'Aucune piste'}</span>
-              {currentTrack && <MoreHorizontal size={16} color="var(--text-subdued)" style={{ cursor: 'pointer' }} />}
-            </div>
-            <span className="track-artist">{currentTrack ? currentTrack.artist : ''}</span>
+            <div className="track-title">{currentTrack ? currentTrack.title : 'Aucune piste'}</div>
+            <div className="track-artist">{currentTrack ? currentTrack.artist : ''}</div>
           </div>
-        </div>
-
-        <div className="player-center">
-          <div className="player-controls">
-            <button className="control-btn" onClick={prevTrack} disabled={!currentTrack}><SkipBack size={20} fill="currentColor" /></button>
-            <button className="control-btn play-btn" onClick={togglePlay} disabled={!currentTrack}>
-              {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: '2px' }} />}
-            </button>
-            <button className="control-btn" onClick={nextTrack} disabled={!currentTrack}><SkipForward size={20} fill="currentColor" /></button>
-          </div>
-          <div className="progress-container">
-            <span className="time-text">{formatTime(progress)}</span>
-            <div className="progress-bar" onClick={(e) => {
-                if (!currentTrack || !duration) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const pos = (e.clientX - rect.left) / rect.width;
-                seekTo(pos * duration);
-              }}>
-              <div className="progress-fill" style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }}></div>
-            </div>
-            <span className="time-text">{formatTime(duration)}</span>
-          </div>
-        </div>
-
-        <div className="player-right">
-          <button className="control-btn" title="Mini Player (Toujours au-dessus)" onClick={startPiP} disabled={!currentTrack}>
-            <PictureInPicture2 size={20} />
-          </button>
-          <div className="volume-container">
-            <Volume2 size={20} className="control-btn" />
-            <div className="progress-bar" onClick={(e) => {
+          
+          <div className="widget-actions">
+            <Volume2 size={18} />
+            <div className="progress-bar" style={{ width: '60px' }} onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 setVolume(pos * 100);
               }}>
               <div className="progress-fill" style={{ width: `${volume}%` }}></div>
             </div>
+            <MoreHorizontal size={20} style={{ cursor: 'pointer', marginLeft: '4px' }} />
           </div>
+        </div>
+
+        <div className="widget-controls">
+          <button className="control-btn" onClick={prevTrack} disabled={!currentTrack}><SkipBack size={24} fill="currentColor" /></button>
+          <button className="control-btn play-btn" onClick={togglePlay} disabled={!currentTrack}>
+            {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" style={{ marginLeft: '4px' }} />}
+          </button>
+          <button className="control-btn" onClick={nextTrack} disabled={!currentTrack}><SkipForward size={24} fill="currentColor" /></button>
+        </div>
+        
+        <div className="widget-progress">
+          <span className="time-text">{formatTime(progress)}</span>
+          <div className="progress-bar" onClick={(e) => {
+              if (!currentTrack || !duration) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pos = (e.clientX - rect.left) / rect.width;
+              seekTo(pos * duration);
+            }}>
+            <div className="progress-fill" style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }}></div>
+          </div>
+          <span className="time-text">{formatTime(duration)}</span>
         </div>
       </footer>
 
