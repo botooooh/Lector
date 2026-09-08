@@ -117,6 +117,9 @@ function App() {
       alert("Votre navigateur ne supporte pas la fonctionnalité Document Picture-in-Picture.");
       return;
     }
+    if (window.documentPictureInPicture.window) {
+      window.documentPictureInPicture.window.close();
+    }
     try {
       const pipWindow = await window.documentPictureInPicture.requestWindow({
         width: 320,
@@ -179,7 +182,10 @@ function App() {
         }
       });
       pipWindow.addEventListener("pagehide", () => unsubscribe());
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      alert("Impossible d'ouvrir le mode PiP : " + err.message);
+    }
   };
 
   if (!isDataLoaded) return <div style={{ color: 'var(--md-sys-color-on-background)', padding: '24px' }}>Chargement...</div>;
