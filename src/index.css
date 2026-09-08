@@ -101,9 +101,32 @@ button { background: none; border: none; cursor: pointer; color: inherit; font-f
   background-color: var(--md-sys-color-surface-container-highest); 
   color: var(--md-sys-color-on-surface); 
 }
-.nav-item.active { 
-  background-color: var(--md-sys-color-secondary-container); 
-  color: var(--md-sys-color-on-secondary-container); 
+.nav-item.active {
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-primary);
+}
+.nav-item.active svg {
+  fill: currentColor;
+}
+
+.playlist-nav-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.playlist-nav-actions {
+  display: none;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: 50%;
+  padding: 4px;
+  z-index: 5;
+}
+.playlist-nav-wrapper:hover .playlist-nav-actions, .playlist-nav-actions.active {
+  display: flex;
 }
 
 .playlist-cover-small {

@@ -29,6 +29,8 @@ function App() {
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistImage, setNewPlaylistImage] = useState(null);
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
+  const [sidebarMenuId, setSidebarMenuId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     initData();
@@ -185,36 +187,67 @@ function App() {
           <button className={`nav-item ${currentView.type === 'home' ? 'active' : ''}`} onClick={() => setCurrentView({ type: 'home' })}>
             <Home size={24} /> <span>Accueil</span>
           </button>
-          <button className="nav-item">
+          <button className={`nav-item ${currentView.type === 'search' ? 'active' : ''}`} onClick={() => setCurrentView({ type: 'search' })}>
             <Search size={24} /> <span>Rechercher</span>
           </button>
         </div>
         <div className="nav-section" style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="nav-item" style={{ marginBottom: '8px' }}>
-            <Library size={24} /> <span>Votre Bibliothèque</span>
-          </div>
           <button className={`nav-item ${currentView.type === 'library' ? 'active' : ''}`} onClick={() => setCurrentView({ type: 'library' })}>
-            <PlayCircle size={20} /> <span>File d'attente globale</span>
+            <Library size={24} /> <span>Votre Bibliothèque</span>
           </button>
           
           <div style={{ margin: '16px 0', borderTop: '1px solid var(--md-sys-color-outline-variant)' }}></div>
           
           {userPlaylists.map(pl => (
-            <button 
-              key={pl.id} 
-              className={`nav-item ${currentView.id === pl.id ? 'active' : ''}`} 
-              onClick={() => setCurrentView({ type: 'playlist', id: pl.id })}
-              style={{ padding: '8px 16px', gap: '12px' }}
-            >
-              {pl.coverImage ? (
-                <img src={pl.coverImage} className="playlist-cover-small" alt="cover" />
-              ) : (
-                <div className="playlist-cover-small" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Music size={16} />
+            <div key={pl.id} className="playlist-nav-wrapper" onMouseLeave={() => setSidebarMenuId(null)}>
+              <button 
+                className={`nav-item ${currentView.id === pl.id ? 'active' : ''}`} 
+                onClick={() => setCurrentView({ type: 'playlist', id: pl.id })}
+                style={{ padding: '8px 16px', gap: '12px', width: '100%' }}
+              >
+                {pl.coverImage ? (
+                  <img src={pl.coverImage} className="playlist-cover-small" alt="cover" />
+                ) : (
+                  <div className="playlist-cover-small" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Music size={16} />
+                  </div>
+                )}
+                <span style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, textAlign: 'left' }}>{pl.name}</span>
+                {pl.pinned && <Pin size={16} fill="currentColor" color="var(--md-sys-color-on-surface-variant)" />}
+              </button>
+              <div className={`playlist-nav-actions ${sidebarMenuId === pl.id ? 'active' : ''}`}>
+                <div style={{ position: 'relative' }}>
+                  <MoreHorizontal 
+                    size={20} 
+                    style={{ cursor: 'pointer', color: 'var(--md-sys-color-on-surface)' }} 
+                    onClick={(e) => { e.stopPropagation(); setSidebarMenuId(sidebarMenuId === pl.id ? null : pl.id); }} 
+                  />
+                  {sidebarMenuId === pl.id && (
+                    <div className="dropdown-menu" style={{ top: '100%', right: '0', left: 'auto' }}>
+                      <button className="dropdown-item" onClick={(e) => { e.stopPropagation(); setSidebarMenuId(null); togglePinPlaylist(pl.id); }}>
+                        <Pin size={18} fill={pl.pinned ? "currentColor" : "none"} /> {pl.pinned ? "Désépingler" : "Épingler"}
+                      </button>
+                      <button className="dropdown-item" onClick={(e) => { 
+                        e.stopPropagation(); setSidebarMenuId(null); 
+                        const newName = prompt("Nouveau nom :", pl.name);
+                        if (newName) renamePlaylist(pl.id, newName);
+                      }}>
+                        <Edit2 size={18} /> Modifier
+                      </button>
+                      <button className="dropdown-item" style={{ color: '#F2B8B5' }} onClick={(e) => {
+                        e.stopPropagation(); setSidebarMenuId(null);
+                        if (confirm(`Voulez-vous vraiment supprimer "${pl.name}" ?`)) {
+                          deletePlaylist(pl.id);
+                          if (currentView.id === pl.id) setCurrentView({ type: 'home' });
+                        }
+                      }}>
+                        <Trash2 size={18} /> Supprimer
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              <span style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pl.name}</span>
-            </button>
+              </div>
+            </div>
           ))}
 
           <button className="nav-item" style={{ padding: '12px 16px', marginTop: '8px' }} onClick={() => setShowPlaylistModal(true)}>
@@ -226,8 +259,9 @@ function App() {
       <main className="main-view">
         <div className="top-bar">
           <h2 className="header-title" style={{ margin: 0 }}>
-            {currentView.type === 'library' && "File d'attente globale"}
+            {currentView.type === 'library' && "Votre Bibliothèque"}
             {currentView.type === 'playlist' && "Playlist"}
+            {currentView.type === 'search' && "Rechercher"}
           </h2>
         </div>
         
@@ -247,6 +281,41 @@ function App() {
                 Choisir des fichiers locaux
                 <input type="file" accept="audio/*" multiple style={{ display: 'none' }} onChange={e => addLocalFilesToQueue(e.target.files)} />
               </label>
+            </div>
+          )}
+
+          {currentView.type === 'search' && (
+            <div style={{ marginTop: '24px' }}>
+              <div style={{ display: 'flex', gap: '16px', maxWidth: '600px', marginBottom: '32px' }}>
+                <Search size={24} color="var(--md-sys-color-on-surface-variant)" style={{ position: 'absolute', margin: '16px' }} />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Que souhaitez-vous écouter ?" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ paddingLeft: '56px' }}
+                />
+              </div>
+              
+              {searchQuery && (
+                <div className="track-list">
+                  <h3 style={{ marginBottom: '16px' }}>Résultats dans la Bibliothèque</h3>
+                  {queue.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()) || t.artist.toLowerCase().includes(searchQuery.toLowerCase())).map((track, i) => (
+                    <div key={track.id} className="track-row" onClick={() => playTrack(queue.findIndex(q => q.id === track.id))}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {track.type === 'youtube' ? <img src={`https://img.youtube.com/vi/${track.url}/default.jpg`} style={{width: '32px', height: '24px', objectFit: 'cover', borderRadius: '4px'}} /> : <Music size={16} />}
+                      </div>
+                      <div style={{ overflow: 'hidden', paddingRight: '16px' }}>
+                        <div className="track-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artist}</div>
+                      </div>
+                      <div>{track.type === 'youtube' ? 'YouTube' : 'Local'}</div>
+                      <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
