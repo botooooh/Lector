@@ -17,6 +17,8 @@ export const useStore = create((set, get) => ({
   volume: 100,
   progress: 0,
   duration: 0,
+  isShuffle: false,
+  isRepeat: false,
   
   // Custom Playlists
   userPlaylists: [],
@@ -135,6 +137,30 @@ export const useStore = create((set, get) => ({
     get().savePlaylists(playlists);
   },
 
+  deletePlaylist: (playlistId) => {
+    const playlists = get().userPlaylists.filter(p => p.id !== playlistId);
+    set({ userPlaylists: playlists });
+    get().savePlaylists(playlists);
+  },
+
+  renamePlaylist: (playlistId, newName) => {
+    const playlists = get().userPlaylists.map(p => 
+      p.id === playlistId ? { ...p, name: newName } : p
+    );
+    set({ userPlaylists: playlists });
+    get().savePlaylists(playlists);
+  },
+
+  togglePinPlaylist: (playlistId) => {
+    const playlists = get().userPlaylists.map(p => 
+      p.id === playlistId ? { ...p, pinned: !p.pinned } : p
+    );
+    // Sort pinned playlists first
+    playlists.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    set({ userPlaylists: playlists });
+    get().savePlaylists(playlists);
+  },
+
   playQueue: (tracks, startIndex = 0) => {
     set({ queue: tracks });
     get().saveQueue(tracks);
@@ -185,22 +211,35 @@ export const useStore = create((set, get) => ({
   },
 
   nextTrack: () => {
-    const { currentTrackIndex, queue } = get();
-    if (currentTrackIndex < queue.length - 1) {
+    const { currentTrackIndex, queue, isShuffle, isRepeat } = get();
+    if (queue.length === 0) return;
+
+    if (isShuffle) {
+      const nextIndex = Math.floor(Math.random() * queue.length);
+      get().playTrack(nextIndex);
+    } else if (currentTrackIndex < queue.length - 1) {
       get().playTrack(currentTrackIndex + 1);
-    } else if (queue.length > 0) {
+    } else if (isRepeat) {
       get().playTrack(0);
     }
   },
 
   prevTrack: () => {
-    const { currentTrackIndex, progress } = get();
+    const { currentTrackIndex, queue, progress, isShuffle } = get();
+    if (queue.length === 0) return;
+
     if (progress > 3) {
       get().seekTo(0);
+    } else if (isShuffle) {
+      const prevIndex = Math.floor(Math.random() * queue.length);
+      get().playTrack(prevIndex);
     } else if (currentTrackIndex > 0) {
       get().playTrack(currentTrackIndex - 1);
     }
   },
+
+  toggleShuffle: () => set({ isShuffle: !get().isShuffle }),
+  toggleRepeat: () => set({ isRepeat: !get().isRepeat }),
 
   setVolume: (val) => {
     set({ volume: val });

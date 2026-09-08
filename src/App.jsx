@@ -14,7 +14,9 @@ const formatTime = (seconds) => {
 function App() {
   const { 
     queue, currentTrackIndex, isPlaying, volume, progress, duration,
+    isShuffle, isRepeat, toggleShuffle, toggleRepeat,
     userPlaylists, isDataLoaded, initData, createPlaylist, addTrackToPlaylist, playQueue,
+    deletePlaylist, renamePlaylist, togglePinPlaylist,
     setAudioRef, setYtPlayer, addYouTubeTrackToQueue, addLocalFilesToQueue, playTrack,
     togglePlay, nextTrack, prevTrack, setVolume, seekTo,
     updateProgress, updateDuration, updateTrackMetadata
@@ -300,14 +302,30 @@ function App() {
                   }}>
                     <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />
                   </button>
-                  <Shuffle size={28} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer', marginLeft: '16px' }} />
+                  <Shuffle size={28} color={isShuffle ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface-variant)"} style={{ cursor: 'pointer', marginLeft: '16px' }} onClick={toggleShuffle} />
                   <div style={{ position: 'relative', marginLeft: '8px' }}>
                     <MoreHorizontal size={32} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer' }} onClick={() => setPlaylistMenuOpen(!playlistMenuOpen)} />
                     {playlistMenuOpen && (
                       <div className="dropdown-menu">
-                        <button className="dropdown-item" onClick={() => setPlaylistMenuOpen(false)}><Pin size={18} /> Épingler</button>
-                        <button className="dropdown-item" onClick={() => setPlaylistMenuOpen(false)}><Edit2 size={18} /> Modifier</button>
-                        <button className="dropdown-item" style={{ color: '#F2B8B5' }} onClick={() => setPlaylistMenuOpen(false)}><Trash2 size={18} /> Supprimer</button>
+                        <button className="dropdown-item" onClick={() => { setPlaylistMenuOpen(false); togglePinPlaylist(pl.id); }}>
+                          <Pin size={18} fill={pl.pinned ? "currentColor" : "none"} /> {pl.pinned ? "Désépingler" : "Épingler"}
+                        </button>
+                        <button className="dropdown-item" onClick={() => { 
+                          setPlaylistMenuOpen(false); 
+                          const newName = prompt("Nouveau nom :", pl.name);
+                          if (newName) renamePlaylist(pl.id, newName);
+                        }}>
+                          <Edit2 size={18} /> Modifier
+                        </button>
+                        <button className="dropdown-item" style={{ color: '#F2B8B5' }} onClick={() => {
+                          setPlaylistMenuOpen(false);
+                          if (confirm(`Voulez-vous vraiment supprimer "${pl.name}" ?`)) {
+                            deletePlaylist(pl.id);
+                            setCurrentView({ type: 'home' });
+                          }
+                        }}>
+                          <Trash2 size={18} /> Supprimer
+                        </button>
                       </div>
                     )}
                   </div>
@@ -383,13 +401,25 @@ function App() {
 
         <div className="player-center">
           <div className="player-controls">
-            <button className="control-btn"><Shuffle size={20} color="var(--md-sys-color-primary)" /></button>
+            <div style={{ position: 'relative' }}>
+              <button className="control-btn" onClick={toggleShuffle}>
+                <Shuffle size={20} color={isShuffle ? "var(--md-sys-color-primary)" : "currentColor"} />
+              </button>
+              {isShuffle && <div style={{ position: 'absolute', bottom: '0', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-primary)' }} />}
+            </div>
+            
             <button className="control-btn" onClick={prevTrack} disabled={!currentTrack}><SkipBack size={20} fill="currentColor" /></button>
             <button className="control-btn play-btn" onClick={togglePlay} disabled={!currentTrack}>
               {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: '2px' }} />}
             </button>
             <button className="control-btn" onClick={nextTrack} disabled={!currentTrack}><SkipForward size={20} fill="currentColor" /></button>
-            <button className="control-btn"><Repeat size={20} /></button>
+            
+            <div style={{ position: 'relative' }}>
+              <button className="control-btn" onClick={toggleRepeat}>
+                <Repeat size={20} color={isRepeat ? "var(--md-sys-color-primary)" : "currentColor"} />
+              </button>
+              {isRepeat && <div style={{ position: 'absolute', bottom: '0', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-primary)' }} />}
+            </div>
           </div>
           <div className="progress-container">
             <span className="time-text">{formatTime(progress)}</span>
