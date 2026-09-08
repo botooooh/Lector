@@ -174,6 +174,10 @@ function App() {
       </div>
 
       <aside className="sidebar">
+        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/Lector logo.png" alt="Lector Logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+          <span style={{ fontSize: '20px', fontWeight: 'bold' }}>Lector</span>
+        </div>
         <div className="nav-section">
           <button className={`nav-item ${currentView.type === 'home' ? 'active' : ''}`} onClick={() => setCurrentView({ type: 'home' })}>
             <Home size={24} /> <span>Accueil</span>
@@ -248,8 +252,10 @@ function App() {
                 <div className="track-list">
                   {queue.map((track, i) => (
                     <div key={track.id} className={`track-row ${i === currentTrackIndex ? 'playing' : ''}`} onClick={() => playTrack(i)}>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        {i === currentTrackIndex && isPlaying ? <Pause size={16} fill="currentColor" /> : (i === currentTrackIndex ? <Play size={16} fill="currentColor" /> : i + 1)}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {i === currentTrackIndex && isPlaying ? <Pause size={16} fill="currentColor" /> : (
+                          track.type === 'youtube' ? <img src={`https://img.youtube.com/vi/${track.url}/default.jpg`} style={{width: '32px', height: '24px', objectFit: 'cover', borderRadius: '4px'}} /> : <Music size={16} />
+                        )}
                       </div>
                       <div style={{ overflow: 'hidden', paddingRight: '16px' }}>
                         <div className="track-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
@@ -317,7 +323,9 @@ function App() {
                 <div className="track-list">
                   {pl.tracks.map((track, i) => (
                     <div key={track.id} className="track-row" onClick={() => playQueue(pl.tracks, i)}>
-                      <div>{i + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {track.type === 'youtube' ? <img src={`https://img.youtube.com/vi/${track.url}/default.jpg`} style={{width: '32px', height: '24px', objectFit: 'cover', borderRadius: '4px'}} /> : (i + 1)}
+                      </div>
                       <div style={{ overflow: 'hidden', paddingRight: '16px' }}>
                         <div className="track-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
                         <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artist}</div>
@@ -337,7 +345,15 @@ function App() {
         <div className="player-left">
           <div className="track-art-wrapper">
             <div className="track-art">
-              {currentTrack ? (currentTrack.type === 'youtube' ? <PlayCircle size={24} /> : <Music size={24} />) : <MonitorUp size={24} />}
+              {currentTrack ? (
+                currentTrack.type === 'youtube' ? (
+                  <img src={`https://img.youtube.com/vi/${currentTrack.url}/hqdefault.jpg`} alt="thumbnail" />
+                ) : (
+                  <Music size={24} />
+                )
+              ) : (
+                <MonitorUp size={24} />
+              )}
             </div>
             {currentTrack?.type === 'youtube' && (
               <div className="source-icon-overlay"><Youtube size={12} fill="currentColor" /></div>
