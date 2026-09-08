@@ -19,6 +19,8 @@ export const useStore = create((set, get) => ({
   duration: 0,
   isShuffle: false,
   isRepeat: false,
+  // Favorites (array of identifiers: youtube url or local track id)
+  favorites: [],
   
   // Custom Playlists
   userPlaylists: [],
@@ -36,7 +38,8 @@ export const useStore = create((set, get) => ({
     try {
       const savedQueue = await localforage.getItem('lector_queue') || [];
       const savedPlaylists = await localforage.getItem('lector_playlists') || [];
-      set({ queue: savedQueue, userPlaylists: savedPlaylists, isDataLoaded: true });
+      const savedFavorites = await localforage.getItem('lector_favorites') || [];
+      set({ queue: savedQueue, userPlaylists: savedPlaylists, favorites: savedFavorites, isDataLoaded: true });
     } catch (e) {
       console.error("Error loading data", e);
       set({ isDataLoaded: true });
@@ -49,10 +52,10 @@ export const useStore = create((set, get) => ({
     localforage.setItem('lector_queue', q.filter(t => t.type === 'youtube'));
   },
   savePlaylists: (p) => {
-    // Don't save Local File references if we can't serialize Blob URLs permanently, 
-    // but we can save the playlist structure. For now, we save everything. 
-    // Local URLs will break on reload but that's expected for security.
     localforage.setItem('lector_playlists', p);
+  },
+  saveFavorites: (f) => {
+    localforage.setItem('lector_favorites', f);
   },
 
   addYouTubeTrackToQueue: (url) => {
@@ -63,6 +66,11 @@ export const useStore = create((set, get) => ({
       videoId = match[2];
     } else {
       alert("Lien YouTube invalide");
+      return;
+    }
+
+    if (get().queue.some(t => t.type === 'youtube' && t.url === videoId)) {
+      alert("Cette musique est déjà dans la file d'attente !");
       return;
     }
 
@@ -137,6 +145,19 @@ export const useStore = create((set, get) => ({
     get().savePlaylists(playlists);
   },
 
+  removeTrackFromPlaylist: (playlistId, trackIndex) => {
+    const playlists = get().userPlaylists.map(p => {
+      if (p.id === playlistId) {
+        const newTracks = [...p.tracks];
+        newTracks.splice(trackIndex, 1);
+        return { ...p, tracks: newTracks };
+      }
+      return p;
+    });
+    set({ userPlaylists: playlists });
+    get().savePlaylists(playlists);
+  },
+
   deletePlaylist: (playlistId) => {
     const playlists = get().userPlaylists.filter(p => p.id !== playlistId);
     set({ userPlaylists: playlists });
@@ -165,6 +186,47 @@ export const useStore = create((set, get) => ({
     set({ queue: tracks });
     get().saveQueue(tracks);
     get().playTrack(startIndex);
+  },
+
+  removeTrack: (index) => {
+    const { queue, currentTrackIndex, audioRef, ytPlayer } = get();
+    const newQueue = [...queue];
+    newQueue.splice(index, 1);
+    set({ queue: newQueue });
+    get().saveQueue(newQueue);
+    
+    if (currentTrackIndex === index) {
+      if (newQueue.length > 0) get().playTrack(index >= newQueue.length ? 0 : index);
+      else {
+        if (audioRef) audioRef.pause();
+        if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+        set({ currentTrackIndex: -1, isPlaying: false, progress: 0, duration: 0 });
+      }
+    } else if (currentTrackIndex > index) {
+      set({ currentTrackIndex: currentTrackIndex - 1 });
+    }
+  },
+
+  queueNext: (track) => {
+    const { queue, currentTrackIndex } = get();
+    if (track.type === 'youtube' && queue.some(t => t.type === 'youtube' && t.url === track.url)) {
+      // It's already in the queue, we can remove it first and reinsert it
+      const existingIdx = queue.findIndex(t => t.type === 'youtube' && t.url === track.url);
+      if (existingIdx !== -1) {
+        get().removeTrack(existingIdx);
+      }
+    }
+    const currentQ = get().queue;
+    const insertAt = get().currentTrackIndex !== -1 ? get().currentTrackIndex + 1 : currentQ.length;
+    const newQueue = [...currentQ];
+    newQueue.splice(insertAt, 0, track);
+    set({ queue: newQueue });
+    get().saveQueue(newQueue);
+    
+    // Play immediately if queue was empty
+    if (get().currentTrackIndex === -1) {
+      get().playTrack(0);
+    }
   },
 
   playTrack: (index) => {
@@ -211,11 +273,23 @@ export const useStore = create((set, get) => ({
   },
 
   nextTrack: () => {
-    const { currentTrackIndex, queue, isShuffle, isRepeat } = get();
+    const { currentTrackIndex, queue, isShuffle, isRepeat, favorites } = get();
     if (queue.length === 0) return;
 
     if (isShuffle) {
-      const nextIndex = Math.floor(Math.random() * queue.length);
+      const unplayed = queue.map((_, i) => i).filter(i => i !== currentTrackIndex);
+      if (unplayed.length === 0) {
+        get().playTrack(0);
+        return;
+      }
+      let weightedPool = [];
+      unplayed.forEach(idx => {
+        const t = queue[idx];
+        const identifier = t.type === 'youtube' ? t.url : t.id;
+        const weight = favorites.includes(identifier) ? 3 : 1;
+        for(let i=0; i<weight; i++) weightedPool.push(idx);
+      });
+      const nextIndex = weightedPool[Math.floor(Math.random() * weightedPool.length)];
       get().playTrack(nextIndex);
     } else if (currentTrackIndex < queue.length - 1) {
       get().playTrack(currentTrackIndex + 1);
@@ -225,13 +299,25 @@ export const useStore = create((set, get) => ({
   },
 
   prevTrack: () => {
-    const { currentTrackIndex, queue, progress, isShuffle } = get();
+    const { currentTrackIndex, queue, progress, isShuffle, favorites } = get();
     if (queue.length === 0) return;
 
     if (progress > 3) {
       get().seekTo(0);
     } else if (isShuffle) {
-      const prevIndex = Math.floor(Math.random() * queue.length);
+      const unplayed = queue.map((_, i) => i).filter(i => i !== currentTrackIndex);
+      if (unplayed.length === 0) {
+        get().playTrack(0);
+        return;
+      }
+      let weightedPool = [];
+      unplayed.forEach(idx => {
+        const t = queue[idx];
+        const identifier = t.type === 'youtube' ? t.url : t.id;
+        const weight = favorites.includes(identifier) ? 3 : 1;
+        for(let i=0; i<weight; i++) weightedPool.push(idx);
+      });
+      const prevIndex = weightedPool[Math.floor(Math.random() * weightedPool.length)];
       get().playTrack(prevIndex);
     } else if (currentTrackIndex > 0) {
       get().playTrack(currentTrackIndex - 1);
@@ -268,5 +354,17 @@ export const useStore = create((set, get) => ({
     newQueue[index] = { ...newQueue[index], ...metadata };
     set({ queue: newQueue });
     get().saveQueue(newQueue);
+  },
+
+  toggleFavorite: (identifier) => {
+    const { favorites } = get();
+    let newFavs = [...favorites];
+    if (newFavs.includes(identifier)) {
+      newFavs = newFavs.filter(id => id !== identifier);
+    } else {
+      newFavs.push(identifier);
+    }
+    set({ favorites: newFavs });
+    get().saveFavorites(newFavs);
   }
 }));

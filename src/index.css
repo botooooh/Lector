@@ -440,7 +440,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font-f
 .track-list { display: flex; flex-direction: column; gap: 4px; }
 .track-row { 
   display: grid; 
-  grid-template-columns: 48px 1fr 1fr 100px; 
+  grid-template-columns: 48px 1fr 1fr 100px 48px; 
   padding: 8px 16px; 
   align-items: center; 
   border-radius: var(--md-sys-shape-corner-large); /* Pill shape for rows */

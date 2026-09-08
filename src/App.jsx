@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal, Shuffle, Repeat, Trash2, Edit2, Pin } from 'lucide-react';
+import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal, Shuffle, Repeat, Trash2, Edit2, Pin, Heart, ListPlus } from 'lucide-react';
 import YouTube from 'react-youtube';
 import { useStore } from './store';
 import './index.css';
@@ -19,7 +19,8 @@ function App() {
     deletePlaylist, renamePlaylist, togglePinPlaylist,
     setAudioRef, setYtPlayer, addYouTubeTrackToQueue, addLocalFilesToQueue, playTrack,
     togglePlay, nextTrack, prevTrack, setVolume, seekTo,
-    updateProgress, updateDuration, updateTrackMetadata
+    updateProgress, updateDuration, updateTrackMetadata,
+    removeTrack, queueNext, removeTrackFromPlaylist, toggleFavorite, favorites
   } = useStore();
 
   const [ytInput, setYtInput] = useState('');
@@ -30,6 +31,7 @@ function App() {
   const [newPlaylistImage, setNewPlaylistImage] = useState(null);
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
   const [sidebarMenuId, setSidebarMenuId] = useState(null);
+  const [trackMenuId, setTrackMenuId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -100,6 +102,38 @@ function App() {
       addYouTubeTrackToQueue(ytInput.trim());
       setYtInput('');
     }
+  };
+
+  const renderTrackMenu = (track, index, context = 'queue', playlistId = null) => {
+    const isMenuOpen = trackMenuId === track.id;
+    const identifier = track.type === 'youtube' ? track.url : track.id;
+    const isFav = favorites.includes(identifier);
+    return (
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }} onClick={e => e.stopPropagation()}>
+        <MoreHorizontal 
+          size={20} 
+          style={{ cursor: 'pointer', color: 'var(--md-sys-color-on-surface-variant)' }} 
+          onClick={() => setTrackMenuId(isMenuOpen ? null : track.id)} 
+        />
+        {isMenuOpen && (
+          <div className="dropdown-menu" style={{ right: 0, left: 'auto', bottom: '100%', marginBottom: '8px', zIndex: 10 }}>
+            <button className="dropdown-item" onClick={() => { setTrackMenuId(null); queueNext(track); }}>
+              <ListPlus size={18} /> Lire ensuite
+            </button>
+            <button className="dropdown-item" onClick={() => { setTrackMenuId(null); toggleFavorite(identifier); }}>
+              <Heart size={18} fill={isFav ? "currentColor" : "none"} color={isFav ? "var(--md-sys-color-primary)" : "currentColor"} /> {isFav ? "Retirer des favoris" : "Mettre en préféré"}
+            </button>
+            <button className="dropdown-item" style={{ color: '#F2B8B5' }} onClick={() => {
+              setTrackMenuId(null);
+              if (context === 'queue') removeTrack(index);
+              else if (context === 'playlist') removeTrackFromPlaylist(playlistId, index);
+            }}>
+              <Trash2 size={18} /> Supprimer
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleCreatePlaylist = async () => {
@@ -331,6 +365,7 @@ function App() {
                       </div>
                       <div>{track.type === 'youtube' ? 'YouTube' : 'Local'}</div>
                       <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+                      {renderTrackMenu(track, queue.findIndex(q => q.id === track.id), 'queue')}
                     </div>
                   ))}
                 </div>
@@ -357,6 +392,7 @@ function App() {
                       </div>
                       <div>{track.type === 'youtube' ? 'YouTube' : 'Local'}</div>
                       <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+                      {renderTrackMenu(track, i, 'queue')}
                     </div>
                   ))}
                 </div>
@@ -451,6 +487,7 @@ function App() {
                       </div>
                       <div>{track.type === 'youtube' ? 'YouTube' : 'Local'}</div>
                       <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+                      {renderTrackMenu(track, i, 'playlist', pl.id)}
                     </div>
                   ))}
                 </div>
