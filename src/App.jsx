@@ -125,19 +125,24 @@ function App() {
 
       pipWindow.document.body.innerHTML = `
         <style>
-          body { margin: 0; background: #1D1B20; color: #E6E1E5; font-family: 'Google Sans', sans-serif; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; }
-          .title { font-weight: 500; font-size: 16px; margin-bottom: 4px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .artist { font-size: 14px; color: #CAC4D0; margin-bottom: 16px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          body { margin: 0; background: #1D1B20; color: #E6E1E5; font-family: 'Google Sans', sans-serif; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+          #pip-bg { position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; object-fit: cover; filter: blur(20px) brightness(0.4); z-index: -1; }
+          .content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 100%; }
+          .title { font-weight: 500; font-size: 16px; margin-bottom: 4px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+          .artist { font-size: 14px; color: #CAC4D0; margin-bottom: 16px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
           .controls { display: flex; gap: 24px; align-items: center; }
-          button { background: none; border: none; color: #E6E1E5; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.2s; }
-          button:hover { background: rgba(230, 225, 229, 0.08); color: #D0BCFF; }
+          button { background: none; border: none; color: #E6E1E5; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.2s; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+          button:hover { background: rgba(230, 225, 229, 0.2); color: #FFF; }
         </style>
-        <div class="title" id="pip-title">Lector</div>
-        <div class="artist" id="pip-artist">En attente...</div>
-        <div class="controls">
-          <button id="pip-prev"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg></button>
-          <button id="pip-play"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
-          <button id="pip-next"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg></button>
+        <img id="pip-bg" src="" style="display: none;" />
+        <div class="content">
+          <div class="title" id="pip-title">Lector</div>
+          <div class="artist" id="pip-artist">En attente...</div>
+          <div class="controls">
+            <button id="pip-prev"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg></button>
+            <button id="pip-play"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+            <button id="pip-next"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg></button>
+          </div>
         </div>
       `;
 
@@ -147,11 +152,19 @@ function App() {
         pipWindow.document.getElementById('pip-title').innerText = track ? track.title : 'Lector';
         pipWindow.document.getElementById('pip-artist').innerText = track ? track.artist : 'En attente...';
         
+        const bgImg = pipWindow.document.getElementById('pip-bg');
+        if (track && track.type === 'youtube') {
+          bgImg.src = \`https://img.youtube.com/vi/\${track.url}/hqdefault.jpg\`;
+          bgImg.style.display = 'block';
+        } else {
+          bgImg.style.display = 'none';
+        }
+
         const playBtn = pipWindow.document.getElementById('pip-play');
         if (state.isPlaying) {
-          playBtn.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+          playBtn.innerHTML = \`<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>\`;
         } else {
-          playBtn.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+          playBtn.innerHTML = \`<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>\`;
         }
       };
 
