@@ -232,10 +232,14 @@ function App() {
         <div className="main-content">
           {currentView.type === 'home' && (
             <div style={{ marginTop: '24px' }}>
-              <h3 className="header-title" style={{ fontSize: '20px' }}>Ajouter à la file globale</h3>
-              <div style={{ display: 'flex', gap: '16px', maxWidth: '600px', marginBottom: '16px' }}>
-                <input type="text" className="input-field" placeholder="Coller un lien YouTube..." value={ytInput} onChange={e => setYtInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddYtToQueue()} />
-                <button className="btn-primary" onClick={handleAddYtToQueue}>Ajouter</button>
+              <h2 style={{ fontSize: '32px', marginBottom: '40px', fontWeight: '500' }}>Bonjour</h2>
+          
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '24px', color: 'var(--md-sys-color-on-surface-variant)' }}>Ajouter à la file globale</h3>
+                <div style={{ display: 'flex', gap: '16px', maxWidth: '600px', alignItems: 'center' }}>
+                  <input type="text" className="input-field" placeholder="Coller un lien YouTube..." value={ytInput} onChange={e => setYtInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddYtToQueue()} />
+                  <button className="btn-primary" onClick={handleAddYtToQueue}>Ajouter</button>
+                </div>
               </div>
               <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-block' }}>
                 Choisir des fichiers locaux
