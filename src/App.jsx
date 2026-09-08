@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal } from 'lucide-react';
+import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal, Shuffle, Repeat, Trash2, Edit2, Pin } from 'lucide-react';
 import YouTube from 'react-youtube';
 import { useStore } from './store';
 import './index.css';
@@ -26,6 +26,7 @@ function App() {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistImage, setNewPlaylistImage] = useState(null);
+  const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
 
   useEffect(() => {
     initData();
@@ -299,7 +300,17 @@ function App() {
                   }}>
                     <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />
                   </button>
-                  <MoreHorizontal size={32} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer' }} />
+                  <Shuffle size={28} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer', marginLeft: '16px' }} />
+                  <div style={{ position: 'relative', marginLeft: '8px' }}>
+                    <MoreHorizontal size={32} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer' }} onClick={() => setPlaylistMenuOpen(!playlistMenuOpen)} />
+                    {playlistMenuOpen && (
+                      <div className="dropdown-menu">
+                        <button className="dropdown-item" onClick={() => setPlaylistMenuOpen(false)}><Pin size={18} /> Épingler</button>
+                        <button className="dropdown-item" onClick={() => setPlaylistMenuOpen(false)}><Edit2 size={18} /> Modifier</button>
+                        <button className="dropdown-item" style={{ color: '#F2B8B5' }} onClick={() => setPlaylistMenuOpen(false)}><Trash2 size={18} /> Supprimer</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: 'var(--md-sys-color-surface-container)', borderRadius: 'var(--md-sys-shape-corner-large)' }}>
@@ -372,11 +383,13 @@ function App() {
 
         <div className="player-center">
           <div className="player-controls">
+            <button className="control-btn"><Shuffle size={20} color="var(--md-sys-color-primary)" /></button>
             <button className="control-btn" onClick={prevTrack} disabled={!currentTrack}><SkipBack size={20} fill="currentColor" /></button>
             <button className="control-btn play-btn" onClick={togglePlay} disabled={!currentTrack}>
               {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: '2px' }} />}
             </button>
             <button className="control-btn" onClick={nextTrack} disabled={!currentTrack}><SkipForward size={20} fill="currentColor" /></button>
+            <button className="control-btn"><Repeat size={20} /></button>
           </div>
           <div className="progress-container">
             <span className="time-text">{formatTime(progress)}</span>
