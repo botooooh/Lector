@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal, Youtube } from 'lucide-react';
+import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal } from 'lucide-react';
 import YouTube from 'react-youtube';
 import { useStore } from './store';
 import './index.css';
@@ -356,7 +356,7 @@ function App() {
               )}
             </div>
             {currentTrack?.type === 'youtube' && (
-              <div className="source-icon-overlay"><Youtube size={12} fill="currentColor" /></div>
+              <div className="source-icon-overlay"><img src="/li_youtube.svg" alt="yt" style={{width: '12px', height: '12px'}} /></div>
             )}
           </div>
           <div className="track-info">
