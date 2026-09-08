@@ -1,25 +1,59 @@
 import { create } from 'zustand';
+import localforage from 'localforage';
 
-// Generate a random ID
+// Initialize localforage
+localforage.config({
+  name: 'LectorApp',
+  storeName: 'music_data'
+});
+
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export const useStore = create((set, get) => ({
-  playlist: JSON.parse(localStorage.getItem('lector_playlist')) || [],
+  // Playback queue (what's currently playing)
+  queue: [],
   currentTrackIndex: -1,
   isPlaying: false,
   volume: 100,
   progress: 0,
   duration: 0,
   
-  // Player instances (ref to HTMLAudioElement or YouTube player)
+  // Custom Playlists
+  userPlaylists: [],
+  isDataLoaded: false,
+
+  // Player instances
   audioRef: null,
   ytPlayer: null,
 
   setAudioRef: (ref) => set({ audioRef: ref }),
   setYtPlayer: (player) => set({ ytPlayer: player }),
 
-  addYouTubeTrack: (url) => {
-    // Extract video ID
+  // Load saved data on startup
+  initData: async () => {
+    try {
+      const savedQueue = await localforage.getItem('lector_queue') || [];
+      const savedPlaylists = await localforage.getItem('lector_playlists') || [];
+      set({ queue: savedQueue, userPlaylists: savedPlaylists, isDataLoaded: true });
+    } catch (e) {
+      console.error("Error loading data", e);
+      set({ isDataLoaded: true });
+    }
+  },
+
+  // Save helpers
+  saveQueue: (q) => {
+    // Only save youtube tracks, local files get lost
+    localforage.setItem('lector_queue', q.filter(t => t.type === 'youtube'));
+  },
+  savePlaylists: (p) => {
+    // Don't save Local File references if we can't serialize Blob URLs permanently, 
+    // but we can save the playlist structure. For now, we save everything. 
+    // Local URLs will break on reload but that's expected for security.
+    localforage.setItem('lector_playlists', p);
+  },
+
+  addYouTubeTrackToQueue: (url) => {
     let videoId = '';
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
@@ -34,22 +68,21 @@ export const useStore = create((set, get) => ({
       id: generateId(),
       type: 'youtube',
       url: videoId,
-      title: `YouTube Video (${videoId})`, // Will be updated when loaded
+      title: `YouTube Video (${videoId})`,
       artist: 'YouTube',
       duration: 0
     };
 
-    const newPlaylist = [...get().playlist, newTrack];
-    set({ playlist: newPlaylist });
-    localStorage.setItem('lector_playlist', JSON.stringify(newPlaylist.filter(t => t.type === 'youtube')));
+    const newQueue = [...get().queue, newTrack];
+    set({ queue: newQueue });
+    get().saveQueue(newQueue);
     
-    // Play immediately if it's the first track
     if (get().currentTrackIndex === -1) {
-      get().playTrack(newPlaylist.length - 1);
+      get().playTrack(newQueue.length - 1);
     }
   },
 
-  addLocalFiles: (files) => {
+  addLocalFilesToQueue: (files) => {
     const newTracks = Array.from(files).map(file => ({
       id: generateId(),
       type: 'local',
@@ -60,19 +93,58 @@ export const useStore = create((set, get) => ({
       file: file
     }));
 
-    const newPlaylist = [...get().playlist, ...newTracks];
-    set({ playlist: newPlaylist });
+    const newQueue = [...get().queue, ...newTracks];
+    set({ queue: newQueue });
     
     if (get().currentTrackIndex === -1) {
-      get().playTrack(newPlaylist.length - newTracks.length);
+      get().playTrack(newQueue.length - newTracks.length);
     }
   },
 
-  playTrack: (index) => {
-    const { playlist, audioRef, ytPlayer } = get();
-    if (index < 0 || index >= playlist.length) return;
+  // Playlists management
+  createPlaylist: async (name, imageFile) => {
+    let base64Image = null;
+    if (imageFile) {
+      base64Image = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(imageFile);
+      });
+    }
 
-    // Stop current playbacks
+    const newPlaylist = {
+      id: generateId(),
+      name: name || 'Nouvelle Playlist',
+      coverImage: base64Image,
+      tracks: []
+    };
+
+    const updatedPlaylists = [...get().userPlaylists, newPlaylist];
+    set({ userPlaylists: updatedPlaylists });
+    get().savePlaylists(updatedPlaylists);
+  },
+
+  addTrackToPlaylist: (playlistId, track) => {
+    const playlists = get().userPlaylists.map(p => {
+      if (p.id === playlistId) {
+        return { ...p, tracks: [...p.tracks, track] };
+      }
+      return p;
+    });
+    set({ userPlaylists: playlists });
+    get().savePlaylists(playlists);
+  },
+
+  playQueue: (tracks, startIndex = 0) => {
+    set({ queue: tracks });
+    get().saveQueue(tracks);
+    get().playTrack(startIndex);
+  },
+
+  playTrack: (index) => {
+    const { queue, audioRef, ytPlayer } = get();
+    if (index < 0 || index >= queue.length) return;
+
     if (audioRef) audioRef.pause();
     if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
 
@@ -80,10 +152,10 @@ export const useStore = create((set, get) => ({
       currentTrackIndex: index, 
       isPlaying: true,
       progress: 0,
-      duration: playlist[index].duration || 0
+      duration: queue[index].duration || 0
     });
 
-    const track = playlist[index];
+    const track = queue[index];
     if (track.type === 'local' && audioRef) {
       audioRef.src = track.url;
       audioRef.play().catch(e => console.error("Error playing local file:", e));
@@ -94,16 +166,14 @@ export const useStore = create((set, get) => ({
   },
 
   togglePlay: () => {
-    const { isPlaying, currentTrackIndex, playlist, audioRef, ytPlayer } = get();
-    if (currentTrackIndex === -1 && playlist.length > 0) {
+    const { isPlaying, currentTrackIndex, queue, audioRef, ytPlayer } = get();
+    if (currentTrackIndex === -1 && queue.length > 0) {
       get().playTrack(0);
       return;
     }
-
     if (currentTrackIndex === -1) return;
 
-    const track = playlist[currentTrackIndex];
-    
+    const track = queue[currentTrackIndex];
     if (isPlaying) {
       if (track.type === 'local' && audioRef) audioRef.pause();
       if (track.type === 'youtube' && ytPlayer) ytPlayer.pauseVideo();
@@ -111,22 +181,20 @@ export const useStore = create((set, get) => ({
       if (track.type === 'local' && audioRef) audioRef.play();
       if (track.type === 'youtube' && ytPlayer) ytPlayer.playVideo();
     }
-    
     set({ isPlaying: !isPlaying });
   },
 
   nextTrack: () => {
-    const { currentTrackIndex, playlist } = get();
-    if (currentTrackIndex < playlist.length - 1) {
+    const { currentTrackIndex, queue } = get();
+    if (currentTrackIndex < queue.length - 1) {
       get().playTrack(currentTrackIndex + 1);
-    } else if (playlist.length > 0) {
-      get().playTrack(0); // loop back
+    } else if (queue.length > 0) {
+      get().playTrack(0);
     }
   },
 
   prevTrack: () => {
-    const { currentTrackIndex, playlist, progress } = get();
-    // If played more than 3 seconds, restart current track
+    const { currentTrackIndex, progress } = get();
     if (progress > 3) {
       get().seekTo(0);
     } else if (currentTrackIndex > 0) {
@@ -142,10 +210,9 @@ export const useStore = create((set, get) => ({
   },
 
   seekTo: (seconds) => {
-    const { currentTrackIndex, playlist, audioRef, ytPlayer } = get();
+    const { currentTrackIndex, queue, audioRef, ytPlayer } = get();
     if (currentTrackIndex === -1) return;
-    
-    const track = playlist[currentTrackIndex];
+    const track = queue[currentTrackIndex];
     if (track.type === 'local' && audioRef) {
       audioRef.currentTime = seconds;
     } else if (track.type === 'youtube' && ytPlayer) {
@@ -158,9 +225,9 @@ export const useStore = create((set, get) => ({
   updateDuration: (seconds) => set({ duration: seconds }),
   
   updateTrackMetadata: (index, metadata) => {
-    const newPlaylist = [...get().playlist];
-    newPlaylist[index] = { ...newPlaylist[index], ...metadata };
-    set({ playlist: newPlaylist });
-    localStorage.setItem('lector_playlist', JSON.stringify(newPlaylist.filter(t => t.type === 'youtube')));
+    const newQueue = [...get().queue];
+    newQueue[index] = { ...newQueue[index], ...metadata };
+    set({ queue: newQueue });
+    get().saveQueue(newQueue);
   }
 }));

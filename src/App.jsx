@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music } from 'lucide-react';
+import { Home, Library, Search, Play, SkipBack, SkipForward, Volume2, Maximize2, PictureInPicture2, Pause, PlusCircle, MonitorUp, PlayCircle, Music, MoreHorizontal, Youtube } from 'lucide-react';
 import YouTube from 'react-youtube';
 import { useStore } from './store';
 import './index.css';
@@ -13,14 +13,23 @@ const formatTime = (seconds) => {
 
 function App() {
   const { 
-    playlist, currentTrackIndex, isPlaying, volume, progress, duration,
-    setAudioRef, setYtPlayer, addYouTubeTrack, addLocalFiles, playTrack,
+    queue, currentTrackIndex, isPlaying, volume, progress, duration,
+    userPlaylists, isDataLoaded, initData, createPlaylist, addTrackToPlaylist, playQueue,
+    setAudioRef, setYtPlayer, addYouTubeTrackToQueue, addLocalFilesToQueue, playTrack,
     togglePlay, nextTrack, prevTrack, setVolume, seekTo,
     updateProgress, updateDuration, updateTrackMetadata
   } = useStore();
 
   const [ytInput, setYtInput] = useState('');
   const audioRef = useRef(null);
+  const [currentView, setCurrentView] = useState({ type: 'home' }); // {type: 'home' | 'library' | 'playlist', id?: string}
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [newPlaylistImage, setNewPlaylistImage] = useState(null);
+
+  useEffect(() => {
+    initData();
+  }, [initData]);
 
   useEffect(() => {
     setAudioRef(audioRef.current);
@@ -50,15 +59,11 @@ function App() {
   };
 
   const onYtStateChange = (event) => {
-    // YT.PlayerState.PLAYING = 1
-    // YT.PlayerState.ENDED = 0
     if (event.data === 0) {
       nextTrack();
     } else if (event.data === 1) {
       updateDuration(event.target.getDuration());
-      
-      // Update metadata if it's still generic
-      const track = playlist[currentTrackIndex];
+      const track = queue[currentTrackIndex];
       if (track && track.title.startsWith('YouTube Video')) {
         const videoData = event.target.getVideoData();
         updateTrackMetadata(currentTrackIndex, {
@@ -69,12 +74,11 @@ function App() {
     }
   };
 
-  // Sync YouTube progress manually since it doesn't fire timeupdate events
   useEffect(() => {
     let interval;
     if (isPlaying) {
       interval = setInterval(() => {
-        const track = playlist[currentTrackIndex];
+        const track = queue[currentTrackIndex];
         if (track?.type === 'youtube') {
           const { ytPlayer } = useStore.getState();
           if (ytPlayer && ytPlayer.getCurrentTime) {
@@ -84,16 +88,23 @@ function App() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, currentTrackIndex, playlist, updateProgress]);
+  }, [isPlaying, currentTrackIndex, queue, updateProgress]);
 
-  const handleAddYt = () => {
+  const handleAddYtToQueue = () => {
     if (ytInput.trim()) {
-      addYouTubeTrack(ytInput.trim());
+      addYouTubeTrackToQueue(ytInput.trim());
       setYtInput('');
     }
   };
 
-  const currentTrack = currentTrackIndex >= 0 ? playlist[currentTrackIndex] : null;
+  const handleCreatePlaylist = async () => {
+    await createPlaylist(newPlaylistName, newPlaylistImage);
+    setShowPlaylistModal(false);
+    setNewPlaylistName('');
+    setNewPlaylistImage(null);
+  };
+
+  const currentTrack = currentTrackIndex >= 0 ? queue[currentTrackIndex] : null;
 
   // Handle PiP
   const startPiP = async () => {
@@ -107,13 +118,9 @@ function App() {
         height: 120,
       });
 
-      // Simple HTML template for PiP
       pipWindow.document.body.innerHTML = `
         <style>
-          body { 
-            margin: 0; background: #121212; color: white; font-family: sans-serif;
-            display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center;
-          }
+          body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; }
           .title { font-weight: bold; font-size: 14px; margin-bottom: 4px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .artist { font-size: 12px; color: #a7a7a7; margin-bottom: 16px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .controls { display: flex; gap: 20px; align-items: center; }
@@ -129,10 +136,9 @@ function App() {
         </div>
       `;
 
-      // Update func
       const updatePiP = () => {
         const state = useStore.getState();
-        const track = state.playlist[state.currentTrackIndex];
+        const track = state.queue[state.currentTrackIndex];
         pipWindow.document.getElementById('pip-title').innerText = track ? track.title : 'Lector';
         pipWindow.document.getElementById('pip-artist').innerText = track ? track.artist : 'En attente...';
         
@@ -145,151 +151,203 @@ function App() {
       };
 
       updatePiP();
-
-      // Bind buttons
       pipWindow.document.getElementById('pip-play').onclick = () => { togglePlay(); updatePiP(); };
       pipWindow.document.getElementById('pip-prev').onclick = () => { prevTrack(); updatePiP(); };
       pipWindow.document.getElementById('pip-next').onclick = () => { nextTrack(); updatePiP(); };
 
-      // Subscribe to store changes to update PiP UI
       const unsubscribe = useStore.subscribe((state, prevState) => {
         if (state.isPlaying !== prevState.isPlaying || state.currentTrackIndex !== prevState.currentTrackIndex) {
           updatePiP();
         }
       });
-
-      pipWindow.addEventListener("pagehide", () => {
-        unsubscribe();
-      });
-
-    } catch (err) {
-      console.error(err);
-    }
+      pipWindow.addEventListener("pagehide", () => unsubscribe());
+    } catch (err) { console.error(err); }
   };
+
+  if (!isDataLoaded) return <div style={{ color: 'white', padding: '24px' }}>Chargement...</div>;
 
   return (
     <div className="app-container">
-      {/* Hidden Audio Players */}
-      <audio 
-        ref={audioRef}
-        onTimeUpdate={handleAudioTimeUpdate}
-        onLoadedMetadata={handleAudioLoadedMetadata}
-        onEnded={handleAudioEnded}
-      />
+      <audio ref={audioRef} onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onEnded={handleAudioEnded} />
       <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', visibility: 'hidden' }}>
-        <YouTube 
-          videoId="" // initialized empty, loaded via API
-          opts={{ height: '0', width: '0', playerVars: { autoplay: 0, controls: 0 } }}
-          onReady={onYtReady}
-          onStateChange={onYtStateChange}
-        />
+        <YouTube videoId="" opts={{ height: '0', width: '0', playerVars: { autoplay: 0, controls: 0 } }} onReady={onYtReady} onStateChange={onYtStateChange} />
       </div>
 
       <aside className="sidebar">
         <div className="nav-section">
-          <button className="nav-item active">
-            <Home size={24} />
-            <span>Accueil</span>
+          <button className={`nav-item ${currentView.type === 'home' ? 'active' : ''}`} onClick={() => setCurrentView({ type: 'home' })}>
+            <Home size={24} /> <span>Accueil</span>
           </button>
           <button className="nav-item">
-            <Search size={24} />
-            <span>Rechercher</span>
+            <Search size={24} /> <span>Rechercher</span>
           </button>
         </div>
         <div className="nav-section" style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="nav-item" style={{ marginBottom: '16px' }}>
-            <Library size={24} />
-            <span>Bibliothèque ({playlist.length})</span>
+          <div className="nav-item" style={{ marginBottom: '8px' }}>
+            <Library size={24} /> <span>Votre Bibliothèque</span>
           </div>
+          <button className={`nav-item ${currentView.type === 'library' ? 'active' : ''}`} onClick={() => setCurrentView({ type: 'library' })}>
+            <PlayCircle size={20} /> <span>File d'attente globale</span>
+          </button>
           
-          <div className="track-list" style={{ gap: '4px' }}>
-            {playlist.map((track, i) => (
-              <div 
-                key={track.id} 
-                className={`track-row ${i === currentTrackIndex ? 'playing' : ''}`}
-                onClick={() => playTrack(i)}
-                style={{ gridTemplateColumns: '32px 1fr', padding: '8px', paddingRight: 0 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {track.type === 'youtube' ? <PlayCircle size={16} /> : <Music size={16} />}
+          <div style={{ margin: '16px 0', borderTop: '1px solid var(--border-subdued)' }}></div>
+          
+          {userPlaylists.map(pl => (
+            <button 
+              key={pl.id} 
+              className={`nav-item ${currentView.id === pl.id ? 'active' : ''}`} 
+              onClick={() => setCurrentView({ type: 'playlist', id: pl.id })}
+              style={{ padding: '8px 16px', gap: '12px' }}
+            >
+              {pl.coverImage ? (
+                <img src={pl.coverImage} className="playlist-cover-small" alt="cover" />
+              ) : (
+                <div className="playlist-cover-small" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Music size={16} />
                 </div>
-                <div style={{ overflow: 'hidden' }}>
-                  <div className="track-row-title" style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              )}
+              <span style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pl.name}</span>
+            </button>
+          ))}
+
+          <button className="nav-item" style={{ padding: '12px 16px', marginTop: '8px' }} onClick={() => setShowPlaylistModal(true)}>
+            <PlusCircle size={20} /> <span>Créer une playlist</span>
+          </button>
         </div>
       </aside>
 
       <main className="main-view">
         <div className="top-bar">
-          <h2 className="header-title" style={{ margin: 0 }}>Bonjour</h2>
+          <h2 className="header-title" style={{ margin: 0 }}>
+            {currentView.type === 'home' && "Bonjour"}
+            {currentView.type === 'library' && "File d'attente globale"}
+            {currentView.type === 'playlist' && "Playlist"}
+          </h2>
         </div>
         
         <div className="main-content">
-          <div style={{ marginTop: '24px', marginBottom: '32px' }}>
-            <h3 className="header-title" style={{ fontSize: '20px' }}>Ajouter une musique</h3>
-            <div style={{ display: 'flex', gap: '16px', maxWidth: '600px' }}>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Coller un lien YouTube..." 
-                style={{ flex: 1 }}
-                value={ytInput}
-                onChange={e => setYtInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddYt()}
-              />
-              <button className="btn-primary" onClick={handleAddYt}>Ajouter</button>
-            </div>
-            <div style={{ marginTop: '16px' }}>
-              <label className="btn-primary" style={{ cursor: 'pointer', display: 'inline-block', backgroundColor: 'transparent', border: '1px solid #fff', color: '#fff' }}>
+          {currentView.type === 'home' && (
+            <div style={{ marginTop: '24px' }}>
+              <h3 className="header-title" style={{ fontSize: '20px' }}>Ajouter à la file globale</h3>
+              <div style={{ display: 'flex', gap: '16px', maxWidth: '600px', marginBottom: '16px' }}>
+                <input type="text" className="input-field" placeholder="Coller un lien YouTube..." value={ytInput} onChange={e => setYtInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddYtToQueue()} />
+                <button className="btn-primary" onClick={handleAddYtToQueue}>Ajouter</button>
+              </div>
+              <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-block' }}>
                 Choisir des fichiers locaux
-                <input 
-                  type="file" 
-                  accept="audio/*" 
-                  multiple 
-                  style={{ display: 'none' }} 
-                  onChange={e => addLocalFiles(e.target.files)}
-                />
+                <input type="file" accept="audio/*" multiple style={{ display: 'none' }} onChange={e => addLocalFilesToQueue(e.target.files)} />
               </label>
             </div>
-          </div>
+          )}
 
-          <h3 className="header-title" style={{ fontSize: '20px' }}>Playlist Actuelle</h3>
-          {playlist.length === 0 ? (
-            <div style={{ color: 'var(--text-subdued)' }}>Votre playlist est vide. Ajoutez des musiques ci-dessus !</div>
-          ) : (
-            <div className="track-list">
-              {playlist.map((track, i) => (
-                <div 
-                  key={track.id} 
-                  className={`track-row ${i === currentTrackIndex ? 'playing' : ''}`}
-                  onClick={() => playTrack(i)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {i === currentTrackIndex && isPlaying ? <Pause size={16} fill="currentColor" /> : (i === currentTrackIndex ? <Play size={16} fill="currentColor" /> : i + 1)}
-                  </div>
-                  <div style={{ overflow: 'hidden', paddingRight: '16px' }}>
-                    <div className="track-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
-                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artist}</div>
-                  </div>
-                  <div>{track.type === 'youtube' ? 'YouTube' : 'Fichier Local'}</div>
-                  <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+          {currentView.type === 'library' && (
+            <div style={{ marginTop: '24px' }}>
+              {queue.length === 0 ? (
+                <div style={{ color: 'var(--text-subdued)' }}>Votre file d'attente est vide. Ajoutez des musiques depuis l'Accueil !</div>
+              ) : (
+                <div className="track-list">
+                  {queue.map((track, i) => (
+                    <div key={track.id} className={`track-row ${i === currentTrackIndex ? 'playing' : ''}`} onClick={() => playTrack(i)}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {i === currentTrackIndex && isPlaying ? <Pause size={16} fill="currentColor" /> : (i === currentTrackIndex ? <Play size={16} fill="currentColor" /> : i + 1)}
+                      </div>
+                      <div style={{ overflow: 'hidden', paddingRight: '16px' }}>
+                        <div className="track-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artist}</div>
+                      </div>
+                      <div>{track.type === 'youtube' ? 'YouTube' : 'Local'}</div>
+                      <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
+
+          {currentView.type === 'playlist' && (() => {
+            const pl = userPlaylists.find(p => p.id === currentView.id);
+            if (!pl) return null;
+            return (
+              <div>
+                <div className="playlist-header">
+                  {pl.coverImage ? (
+                    <img src={pl.coverImage} className="playlist-header-img" alt="cover" />
+                  ) : (
+                    <div className="playlist-header-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-hover)' }}>
+                      <Music size={64} color="var(--text-subdued)" />
+                    </div>
+                  )}
+                  <div className="playlist-header-info">
+                    <span className="playlist-type">Playlist Publique</span>
+                    <h1 className="playlist-title">{pl.name}</h1>
+                    <span className="playlist-stats">{pl.tracks.length} titres</span>
+                  </div>
+                </div>
+
+                <div className="action-bar">
+                  <button className="action-play-btn" onClick={() => {
+                    if (pl.tracks.length > 0) playQueue(pl.tracks, 0);
+                  }}>
+                    <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />
+                  </button>
+                  <MoreHorizontal size={32} color="var(--text-subdued)" style={{ cursor: 'pointer' }} />
+                </div>
+
+                {/* Simplified track addition for prototype */}
+                <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                  <h4 style={{ marginBottom: '12px' }}>Ajouter un titre à {pl.name}</h4>
+                  <div style={{ display: 'flex', gap: '16px', maxWidth: '600px' }}>
+                    <input type="text" className="input-field" placeholder="Lien YouTube..." id={`yt-${pl.id}`} />
+                    <button className="btn-secondary" onClick={() => {
+                      const input = document.getElementById(`yt-${pl.id}`);
+                      if (input.value) {
+                        // Quick add implementation
+                        let videoId = '';
+                        const match = input.value.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+                        if (match && match[2].length === 11) videoId = match[2];
+                        if (videoId) {
+                          addTrackToPlaylist(pl.id, { id: generateId(), type: 'youtube', url: videoId, title: `YouTube (${videoId})`, artist: 'YouTube', duration: 0 });
+                          input.value = '';
+                        }
+                      }
+                    }}>Ajouter</button>
+                  </div>
+                </div>
+
+                <div className="track-list">
+                  {pl.tracks.map((track, i) => (
+                    <div key={track.id} className="track-row" onClick={() => playQueue(pl.tracks, i)}>
+                      <div>{i + 1}</div>
+                      <div style={{ overflow: 'hidden', paddingRight: '16px' }}>
+                        <div className="track-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</div>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artist}</div>
+                      </div>
+                      <div>{track.type === 'youtube' ? 'YouTube' : 'Local'}</div>
+                      <div style={{ textAlign: 'right' }}>{track.duration ? formatTime(track.duration) : '--:--'}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </main>
 
       <footer className="player-bar">
         <div className="player-left">
-          <div className="track-art">
-            {currentTrack ? (currentTrack.type === 'youtube' ? <PlayCircle size={24} /> : <Music size={24} />) : <MonitorUp size={24} />}
+          <div className="track-art-wrapper">
+            <div className="track-art">
+              {currentTrack ? (currentTrack.type === 'youtube' ? <PlayCircle size={24} /> : <Music size={24} />) : <MonitorUp size={24} />}
+            </div>
+            {currentTrack?.type === 'youtube' && (
+              <div className="source-icon-overlay"><Youtube size={12} fill="currentColor" /></div>
+            )}
           </div>
           <div className="track-info">
-            <span className="track-title">{currentTrack ? currentTrack.title : 'Aucune piste'}</span>
+            <div className="track-title-wrapper">
+              <span className="track-title">{currentTrack ? currentTrack.title : 'Aucune piste'}</span>
+              {currentTrack && <MoreHorizontal size={16} color="var(--text-subdued)" style={{ cursor: 'pointer' }} />}
+            </div>
             <span className="track-artist">{currentTrack ? currentTrack.artist : ''}</span>
           </div>
         </div>
@@ -304,18 +362,15 @@ function App() {
           </div>
           <div className="progress-container">
             <span className="time-text">{formatTime(progress)}</span>
-            <div 
-              className="progress-bar" 
-              onClick={(e) => {
+            <div className="progress-bar" onClick={(e) => {
                 if (!currentTrack || !duration) return;
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos = (e.clientX - rect.left) / rect.width;
                 seekTo(pos * duration);
-              }}
-            >
+              }}>
               <div className="progress-fill" style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }}></div>
             </div>
-            <span className="time-text total">{formatTime(duration)}</span>
+            <span className="time-text">{formatTime(duration)}</span>
           </div>
         </div>
 
@@ -325,21 +380,49 @@ function App() {
           </button>
           <div className="volume-container">
             <Volume2 size={20} className="control-btn" />
-            <div 
-              className="progress-bar"
-              onClick={(e) => {
+            <div className="progress-bar" onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 setVolume(pos * 100);
-              }}
-            >
+              }}>
               <div className="progress-fill" style={{ width: `${volume}%` }}></div>
             </div>
           </div>
         </div>
       </footer>
+
+      {showPlaylistModal && (
+        <div className="modal-overlay" onClick={() => setShowPlaylistModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3 className="header-title" style={{ margin: 0 }}>Créer une Playlist</h3>
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="Nom de la playlist" 
+              value={newPlaylistName} 
+              onChange={e => setNewPlaylistName(e.target.value)} 
+            />
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-subdued)' }}>Image de couverture (optionnel)</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={e => setNewPlaylistImage(e.target.files[0])} 
+                style={{ color: 'white' }}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowPlaylistModal(false)}>Annuler</button>
+              <button className="btn-primary" onClick={handleCreatePlaylist}>Créer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Generate ID function for quick add in playlist view
+const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export default App;
