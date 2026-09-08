@@ -1,0 +1,351 @@
+:root {
+  --bg-base: #000000;
+  --bg-elevated: #121212;
+  --bg-highlight: #1a1a1a;
+  --bg-hover: #282828;
+  --text-base: #ffffff;
+  --text-subdued: #a7a7a7;
+  --accent: #1ed760; /* Spotify green-like accent */
+  --accent-hover: #1fdf64;
+  --border-subdued: #282828;
+  --sidebar-width: 260px;
+  --player-height: 90px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-base);
+  overflow: hidden; /* App feels like a native app */
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+}
+
+/* Scrollbar styling for webkit */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  border: 3px solid var(--bg-elevated);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.app-container {
+  display: flex;
+  height: calc(100vh - var(--player-height));
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-base);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 16px;
+}
+
+.nav-section {
+  background-color: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  color: var(--text-subdued);
+  font-weight: 600;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.nav-item:hover {
+  color: var(--text-base);
+}
+
+.nav-item.active {
+  color: var(--text-base);
+  background-color: var(--bg-hover);
+}
+
+.main-view {
+  flex: 1;
+  background-color: var(--bg-elevated);
+  border-radius: 8px;
+  margin: 8px 8px 0 0;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.player-bar {
+  height: var(--player-height);
+  background-color: var(--bg-base);
+  border-top: 1px solid var(--border-subdued);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+.player-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 30%;
+}
+
+.track-art {
+  width: 56px;
+  height: 56px;
+  background-color: var(--bg-hover);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-subdued);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.track-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.track-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 12px;
+  color: var(--text-subdued);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40%;
+  max-width: 722px;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.control-btn {
+  color: var(--text-subdued);
+  transition: color 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.control-btn:hover {
+  color: var(--text-base);
+}
+.control-btn:active {
+  transform: scale(0.9);
+}
+
+.play-btn {
+  background-color: var(--text-base);
+  color: var(--bg-base);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.play-btn:hover {
+  transform: scale(1.05);
+  color: var(--bg-base);
+}
+.play-btn:active {
+  transform: scale(0.95);
+}
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.time-text {
+  font-size: 11px;
+  color: var(--text-subdued);
+  min-width: 40px;
+  text-align: right;
+}
+.time-text.total {
+  text-align: left;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background-color: var(--bg-hover);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--text-base);
+  border-radius: 2px;
+  width: 0%;
+}
+.progress-bar:hover .progress-fill {
+  background-color: var(--accent);
+}
+
+.player-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 30%;
+  gap: 16px;
+}
+
+.volume-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100px;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(18, 18, 18, 0.9);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.main-content {
+  padding: 0 24px 24px;
+}
+
+/* Common UI */
+.btn-primary {
+  background-color: var(--accent);
+  color: #000;
+  border-radius: 500px;
+  padding: 8px 32px;
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform 0.1s, background-color 0.2s;
+}
+.btn-primary:hover {
+  transform: scale(1.04);
+  background-color: var(--accent-hover);
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.input-field {
+  background-color: var(--bg-hover);
+  border: 1px solid transparent;
+  color: var(--text-base);
+  padding: 12px 16px;
+  border-radius: 4px;
+  width: 100%;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.input-field:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.input-field:focus {
+  background-color: var(--bg-hover);
+  border-color: #727272;
+}
+
+.track-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.track-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 1fr 100px;
+  padding: 8px 16px;
+  align-items: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  color: var(--text-subdued);
+  font-size: 14px;
+}
+
+.track-row:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.track-row:hover .track-row-title {
+  color: var(--text-base);
+}
+
+.track-row.playing .track-row-title {
+  color: var(--accent);
+}
+
+.track-row-title {
+  color: var(--text-base);
+  font-size: 16px;
+  margin-bottom: 4px;
+}
