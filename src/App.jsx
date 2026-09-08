@@ -120,12 +120,12 @@ function App() {
 
       pipWindow.document.body.innerHTML = `
         <style>
-          body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; }
-          .title { font-weight: bold; font-size: 14px; margin-bottom: 4px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .artist { font-size: 12px; color: #a7a7a7; margin-bottom: 16px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .controls { display: flex; gap: 20px; align-items: center; }
-          button { background: none; border: none; color: white; cursor: pointer; padding: 8px; }
-          button:hover { color: #1ed760; }
+          body { margin: 0; background: #1D1B20; color: #E6E1E5; font-family: 'Google Sans', sans-serif; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; }
+          .title { font-weight: 500; font-size: 16px; margin-bottom: 4px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .artist { font-size: 14px; color: #CAC4D0; margin-bottom: 16px; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .controls { display: flex; gap: 24px; align-items: center; }
+          button { background: none; border: none; color: #E6E1E5; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.2s; }
+          button:hover { background: rgba(230, 225, 229, 0.08); color: #D0BCFF; }
         </style>
         <div class="title" id="pip-title">Lector</div>
         <div class="artist" id="pip-artist">En attente...</div>
@@ -164,7 +164,7 @@ function App() {
     } catch (err) { console.error(err); }
   };
 
-  if (!isDataLoaded) return <div style={{ color: 'white', padding: '24px' }}>Chargement...</div>;
+  if (!isDataLoaded) return <div style={{ color: 'var(--md-sys-color-on-background)', padding: '24px' }}>Chargement...</div>;
 
   return (
     <div className="app-container">
@@ -194,7 +194,7 @@ function App() {
             <PlayCircle size={20} /> <span>File d'attente globale</span>
           </button>
           
-          <div style={{ margin: '16px 0', borderTop: '1px solid var(--border-subdued)' }}></div>
+          <div style={{ margin: '16px 0', borderTop: '1px solid var(--md-sys-color-outline-variant)' }}></div>
           
           {userPlaylists.map(pl => (
             <button 
@@ -247,7 +247,7 @@ function App() {
           {currentView.type === 'library' && (
             <div style={{ marginTop: '24px' }}>
               {queue.length === 0 ? (
-                <div style={{ color: 'var(--text-subdued)' }}>Votre file d'attente est vide. Ajoutez des musiques depuis l'Accueil !</div>
+                <div style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Votre file d'attente est vide. Ajoutez des musiques depuis l'Accueil !</div>
               ) : (
                 <div className="track-list">
                   {queue.map((track, i) => (
@@ -279,8 +279,8 @@ function App() {
                   {pl.coverImage ? (
                     <img src={pl.coverImage} className="playlist-header-img" alt="cover" />
                   ) : (
-                    <div className="playlist-header-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-hover)' }}>
-                      <Music size={64} color="var(--text-subdued)" />
+                    <div className="playlist-header-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--md-sys-color-surface-container-highest)' }}>
+                      <Music size={64} color="var(--md-sys-color-on-surface-variant)" />
                     </div>
                   )}
                   <div className="playlist-header-info">
@@ -296,11 +296,10 @@ function App() {
                   }}>
                     <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />
                   </button>
-                  <MoreHorizontal size={32} color="var(--text-subdued)" style={{ cursor: 'pointer' }} />
+                  <MoreHorizontal size={32} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer' }} />
                 </div>
 
-                {/* Simplified track addition for prototype */}
-                <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: 'var(--md-sys-color-surface-container)', borderRadius: 'var(--md-sys-shape-corner-large)' }}>
                   <h4 style={{ marginBottom: '12px' }}>Ajouter un titre à {pl.name}</h4>
                   <div style={{ display: 'flex', gap: '16px', maxWidth: '600px' }}>
                     <input type="text" className="input-field" placeholder="Lien YouTube..." id={`yt-${pl.id}`} />
@@ -362,7 +361,7 @@ function App() {
           <div className="track-info">
             <div className="track-title-wrapper">
               <span className="track-title">{currentTrack ? currentTrack.title : 'Aucune piste'}</span>
-              {currentTrack && <MoreHorizontal size={16} color="var(--text-subdued)" style={{ cursor: 'pointer' }} />}
+              {currentTrack && <MoreHorizontal size={16} color="var(--md-sys-color-on-surface-variant)" style={{ cursor: 'pointer' }} />}
             </div>
             <span className="track-artist">{currentTrack ? currentTrack.artist : ''}</span>
           </div>
@@ -419,12 +418,12 @@ function App() {
               onChange={e => setNewPlaylistName(e.target.value)} 
             />
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-subdued)' }}>Image de couverture (optionnel)</label>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--md-sys-color-on-surface-variant)' }}>Image de couverture (optionnel)</label>
               <input 
                 type="file" 
                 accept="image/*" 
                 onChange={e => setNewPlaylistImage(e.target.files[0])} 
-                style={{ color: 'white' }}
+                style={{ color: 'var(--md-sys-color-on-surface)' }}
               />
             </div>
             <div className="modal-actions">
