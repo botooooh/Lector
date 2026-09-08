@@ -223,7 +223,6 @@ function App() {
       <main className="main-view">
         <div className="top-bar">
           <h2 className="header-title" style={{ margin: 0 }}>
-            {currentView.type === 'home' && "Bonjour"}
             {currentView.type === 'library' && "File d'attente globale"}
             {currentView.type === 'playlist' && "Playlist"}
           </h2>
@@ -398,7 +397,7 @@ function App() {
             <PictureInPicture2 size={20} />
           </button>
           <div className="volume-container">
-            <Volume2 size={20} className="control-btn" />
+            <Volume2 size={20} color="var(--md-sys-color-on-surface-variant)" />
             <div className="progress-bar" onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));

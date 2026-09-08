@@ -112,6 +112,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font-f
   border-radius: var(--md-sys-shape-corner-small);
   object-fit: cover;
   background-color: var(--md-sys-color-surface-container-highest);
+  flex-shrink: 0;
 }
 
 /* Main View */
