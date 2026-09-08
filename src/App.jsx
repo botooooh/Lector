@@ -154,7 +154,7 @@ function App() {
         
         const bgImg = pipWindow.document.getElementById('pip-bg');
         if (track && track.type === 'youtube') {
-          bgImg.src = \`https://img.youtube.com/vi/\${track.url}/hqdefault.jpg\`;
+          bgImg.src = `https://img.youtube.com/vi/${track.url}/hqdefault.jpg`;
           bgImg.style.display = 'block';
         } else {
           bgImg.style.display = 'none';
@@ -162,9 +162,9 @@ function App() {
 
         const playBtn = pipWindow.document.getElementById('pip-play');
         if (state.isPlaying) {
-          playBtn.innerHTML = \`<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>\`;
+          playBtn.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
         } else {
-          playBtn.innerHTML = \`<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>\`;
+          playBtn.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
         }
       };
 
